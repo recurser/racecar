@@ -22,6 +22,7 @@ module Racecar
 
       error_handler
       logfile
+      pidfile
 
       ssl_ca_cert
       ssl_ca_cert_file_path
@@ -43,6 +44,8 @@ module Racecar
     DEFAULT_CONFIG = {
       brokers: ["localhost:9092"],
       client_id: "racecar",
+
+      pidfile: "racecar.pid",
 
       subscriptions: [],
 

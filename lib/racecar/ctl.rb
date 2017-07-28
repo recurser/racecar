@@ -1,5 +1,6 @@
 require "optparse"
 require "racecar/rails_config_file_loader"
+require "racecar/daemon"
 
 module Racecar
   class Ctl
@@ -14,6 +15,37 @@ module Racecar
         ctl.send(command, args)
       else
         raise Racecar::Error, "invalid command: #{command}"
+      end
+    end
+
+    def status(args)
+      parse_options!(args)
+
+      pidfile = Racecar.config.pidfile
+      daemon = Daemon.new(pidfile)
+
+      if daemon.running?
+        puts "running (PID = #{daemon.pid})"
+      else
+        puts daemon.pid_status
+      end
+    end
+
+    def stop(args)
+      parse_options!(args)
+
+      pidfile = Racecar.config.pidfile
+      daemon = Daemon.new(pidfile)
+
+      if daemon.running?
+        daemon.stop!
+        while daemon.running?
+          puts "Waiting for Racecar process to stop..."
+          sleep 5
+        end
+        puts "Racecar stopped"
+      else
+        puts "Racecar is not currently running"
       end
     end
 
@@ -61,6 +93,20 @@ module Racecar
       kafka.deliver_message(message.value, key: message.key, topic: message.topic)
 
       $stderr.puts "=> Delivered message to Kafka cluster"
+    end
+
+    private
+
+    def parse_options!(args)
+      parser = OptionParser.new do |opts|
+        opts.banner = "Usage: racecarctl [options]"
+
+        opts.on("--pidfile PATH", "Use the PID stored in the specified file") do |path|
+          Racecar.config.pidfile = File.expand_path(path)
+        end
+      end
+
+      parser.parse!(args)
     end
   end
 end
